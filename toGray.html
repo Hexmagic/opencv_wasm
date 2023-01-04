@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>CamShift Example</title>
+    <link href="js_example_style.css" rel="stylesheet" type="text/css" />
+</head>
+
+<body>
+    <h2>CamShift Example</h2>  
+    <div>
+        <div class="control"><button id="startAndStop" disabled>Start</button></div>
+</textarea>
+    </div>
+    <p class="err" id="errorMessage"></p>
+    <div>
+        <table cellpadding="0" cellspacing="0" width="0" border="0">
+            <tr>
+                <td>
+                    <video id="videoInput" width="320" height="240" muted loop></video>
+                </td>
+                <td>
+                    <canvas id="canvasOutput" width="320" height="240"></canvas>
+                </td>
+                <td></td>
+                <td></td>
+            </tr>
+            <tr>
+                <td>
+                    <div class="caption">videoInput</div>
+                </td>
+                <td>
+                    <div class="caption">canvasOutput</div>
+                </td>
+                <td></td>
+                <td></td>
+            </tr>
+        </table>
+    </div>
+    <script src="https://webrtc.github.io/adapter/adapter-5.0.4.js" type="text/javascript"></script>
+    <script src="utils.js" type="text/javascript"></script>
+    <script id="codeSnippet" type="text/javascript">
+        function main() {
+            let video = document.getElementById('videoInput');
+            let cap = new cv.VideoCapture(video);
+            console.log("Read");
+            // take first frame of the video
+
+            let frame = new cv.Mat(video.height, video.width, cv.CV_8UC4);
+            let merged_frame = new cv.Mat(video.height, video.width * 3, cv.CV_8UC4);
+            cap.read(frame);
+            streaming = true;
+            const FPS = 30;
+            function processVideo() {
+                try {
+                    if (!streaming) {
+                        // clean and stop.
+                        frame.delete(); dst.delete(); hsvVec.delete(); roiHist.delete(); hsv.delete();
+                        return;
+                    }
+                    let begin = Date.now();
+                    let matvector = new cv.MatVector();
+
+                    matvector.push_back(frame);
+                    matvector.push_back(frame);
+                    matvector.push_back(frame);
+                    cv.hconcat(matvector, merged_frame);
+                    // start processing.
+                    cap.read(frame);
+                    cv.imshow('canvasOutput', merged_frame);
+                    let delay = 1000 / FPS - (Date.now() - begin);
+                    setTimeout(processVideo, delay);
+                } catch (err) {
+                    utils.printError(err);
+                }
+            };
+            setTimeout(processVideo, 0);
+        }
+
+// schedule the first one.
+
+    </script>
+    <script type="text/javascript">
+        let utils = new Utils('errorMessage');
+
+
+
+        let streaming = false;
+        let videoInput = document.getElementById('videoInput');
+        let startAndStop = document.getElementById('startAndStop');
+        let canvasOutput = document.getElementById('canvasOutput');
+        let canvasContext = canvasOutput.getContext('2d');
+
+        startAndStop.addEventListener('click', () => {
+            if (!streaming) {
+                utils.clearError();
+                videoInput.play().then(() => {
+                    onVideoStarted();
+                });
+            } else {
+                videoInput.pause();
+                videoInput.currentTime = 0;
+                onVideoStopped();
+            }
+        });
+
+        function onVideoStarted() {
+            streaming = true;
+            startAndStop.innerText = 'Stop';
+            videoInput.height = videoInput.width * (videoInput.videoHeight / videoInput.videoWidth);
+            main();
+        }
+
+        function onVideoStopped() {
+            streaming = false;
+            canvasContext.clearRect(0, 0, canvasOutput.width, canvasOutput.height);
+            startAndStop.innerText = 'Start';
+        }
+
+        utils.loadOpenCv(() => {
+            videoInput.addEventListener('canplay', () => {
+                startAndStop.removeAttribute('disabled');
+            });
+            videoInput.src = '/Users/mix/Downloads/big_buck_bunny.mp4';
+        });
+    </script>
+</body>
+
+</html>
